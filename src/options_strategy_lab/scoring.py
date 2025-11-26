@@ -1,87 +1,112 @@
 # src/options_strategy_lab/scoring.py
+
+from __future__ import annotations
 import pandas as pd
 
 
-def apply_basic_filters(
-    bwb_df: pd.DataFrame,
-    min_dte: int = 1,
-    max_dte: int = 10,
-    min_credit: float = 0.50,
-    min_short_delta: float = 0.20,
-    max_short_delta: float = 0.35,
-) -> pd.DataFrame:
+def _bwb_pnl_points(k1: float, k2: float, k3: float, credit: float):
     """
-    Apply assignment-style pre-filters to the candidate BWBs.
+    Compute P&L at key points for a call BWB:
+      Long 1 @ K1, Short 2 @ K2, Long 1 @ K3, opened for net credit.
+
+    We evaluate P&L at:
+      - S <= K1  → PnL_low
+      - S  = K2  → PnL_k2
+      - S >= K3  → PnL_high
+
+    Payoff summary (per share):
+
+      S <= K1:
+        all OTM → payoff = 0 → PnL = credit
+
+      K1 < S <= K2:
+        long K1 ITM only → payoff = (S - K1)
+        PnL = (S - K1) + credit
+        at S = K2 → PnL_k2 = (K2 - K1) + credit
+
+      K2 < S <= K3:
+        long K1 ITM, short 2x K2 ITM
+        payoff = (S - K1) - 2 * (S - K2) = -S + 2K2 - K1
+        (we don't need an interior point explicitly for extrema in this toy model)
+
+      S >= K3:
+        all ITM
+        payoff = (S - K1) - 2*(S - K2) + (S - K3)
+               = -K1 + 2K2 - K3 (constant)
+        PnL_high = -K1 + 2*K2 - K3 + credit
     """
-    mask = (
-        (bwb_df["dte"].between(min_dte, max_dte))
-        & (bwb_df["credit"] >= min_credit)
-        & (bwb_df["short_delta"].between(min_short_delta, max_short_delta))
-    )
-    return bwb_df.loc[mask].copy()
+    pnl_low = credit
+    pnl_k2 = (k2 - k1) + credit
+    pnl_high = (-k1 + 2 * k2 - k3) + credit
+
+    pnl_candidates = [pnl_low, pnl_k2, pnl_high]
+
+    max_profit = max(max(pnl_candidates), 0.0)
+    max_loss = max(0.0, -min(pnl_candidates))
+
+    return pnl_low, pnl_k2, pnl_high, max_profit, max_loss
 
 
-def payoff_bwb_per_share(s: float, k1: float, k2: float, k3: float) -> float:
+def score_broken_wing_butterflies(bwb_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Terminal payoff of a BWB (per share) at expiration price s,
-    ignoring entry credit.
-    Strategy: +1C(K1), -2C(K2), +1C(K3).
+    Given a DataFrame of BWB structures (from generate_bwb_candidates),
+    add max_profit, max_loss, and a simple score = max_profit / max_loss.
     """
-    def call_payoff(k: float) -> float:
-        return max(s - k, 0.0)
 
-    return call_payoff(k1) - 2 * call_payoff(k2) + call_payoff(k3)
+    df = bwb_df.copy()
 
+    # Ensure required columns exist
+    required_cols = {"k1", "k2", "k3", "credit"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns in BWB DataFrame: {missing}")
 
-def max_profit_and_loss(
-    k1: float,
-    k2: float,
-    k3: float,
-    credit: float,
-) -> tuple[float, float]:
-    """
-    Compute max profit and max loss (per share) of the BWB,
-    using simple piecewise evaluation at key price points.
+    pnl_low_list = []
+    pnl_k2_list = []
+    pnl_high_list = []
+    max_profit_list = []
+    max_loss_list = []
+    score_list = []
 
-    PnL(s) = payoff_bwb_per_share(s) + credit
-    """
-    # Evaluate PnL at key breakpoints:
-    #  - below K1, at K1, K2, K3, and above K3.
-    candidates = [k1 - 1e-6, k1, k2, k3, k3 + 10_000]  # large above-K3
-    pnls = [payoff_bwb_per_share(s, k1, k2, k3) + credit for s in candidates]
+    for row in df.itertuples(index=False):
+        k1 = float(row.k1)
+        k2 = float(row.k2)
+        k3 = float(row.k3)
+        credit = float(row.credit)
 
-    max_profit = max(pnls)
-    max_loss = -min(pnls)  # positive number
-
-    return max_profit, max_loss
-
-
-def add_bwb_metrics_and_score(bwb_df: pd.DataFrame) -> pd.DataFrame:
-    """
-    For each BWB candidate, compute:
-        - max_profit
-        - max_loss
-        - score = max_profit / max_loss  (simple risk/reward metric)
-    Returns a sorted DataFrame (descending by score).
-    """
-    metrics = bwb_df.copy()
-
-    profits = []
-    losses = []
-    scores = []
-
-    for row in metrics.itertuples(index=False):
-        max_profit, max_loss = max_profit_and_loss(
-            row.k1, row.k2, row.k3, row.credit
+        pnl_low, pnl_k2, pnl_high, max_profit, max_loss = _bwb_pnl_points(
+            k1, k2, k3, credit
         )
-        profits.append(max_profit)
-        losses.append(max_loss)
-        scores.append(max_profit / max_loss if max_loss > 0 else float("nan"))
 
-    metrics["max_profit"] = profits
-    metrics["max_loss"] = losses
-    metrics["score"] = scores
+        pnl_low_list.append(pnl_low)
+        pnl_k2_list.append(pnl_k2)
+        pnl_high_list.append(pnl_high)
+        max_profit_list.append(max_profit)
+        max_loss_list.append(max_loss)
 
-    # Sort best → worst
-    metrics = metrics.sort_values(by="score", ascending=False).reset_index(drop=True)
-    return metrics
+        if max_loss > 0:
+            score = max_profit / max_loss
+        else:
+            # If there is no downside (in this toy calc), treat as very high score
+            score = float("inf") if max_profit > 0 else 0.0
+
+        score_list.append(score)
+
+    df["pnl_low"] = pnl_low_list
+    df["pnl_at_k2"] = pnl_k2_list
+    df["pnl_high"] = pnl_high_list
+    df["max_profit"] = max_profit_list
+    df["max_loss"] = max_loss_list
+    df["score"] = score_list
+
+    return df
+
+
+def sort_by_score(bwb_scored_df: pd.DataFrame, top_n: int | None = None) -> pd.DataFrame:
+    """
+    Sort BWB rows by descending score. Optionally return only top_n rows.
+    """
+    sorted_df = bwb_scored_df.sort_values("score", ascending=False)
+    if top_n is not None:
+        sorted_df = sorted_df.head(top_n)
+    return sorted_df

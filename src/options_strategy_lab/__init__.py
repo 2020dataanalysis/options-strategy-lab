@@ -1,41 +1,34 @@
 # src/options_strategy_lab/__init__.py
+
 from .data_loader import load_chain_csv, select_ticker_and_expiry
 from .strategies import generate_bwb_candidates
-from .scoring import apply_basic_filters, add_bwb_metrics_and_score
+from .filters import filter_broken_wing_butterflies
+from .scoring import score_broken_wing_butterflies, sort_by_score
 
 
 def run_bwb_scan(
     csv_path: str,
-    ticker: str,
+    underlying: str,
     expiry: str,
+    *,
+    # default filter knobs – you can tweak for the assignment
+    min_credit: float = 0.0,
+    min_dte: int | None = None,
+    max_dte: int | None = None,
+    min_short_delta: float | None = None,
+    max_short_delta: float | None = None,
 ):
-    df = load_chain_csv(csv_path)
-    calls = select_ticker_and_expiry(df, ticker=ticker, expiry=expiry, call_only=True)
-    bwb_raw = generate_bwb_candidates(calls)
-    bwb_filtered = apply_basic_filters(bwb_raw)
-    bwb_scored = add_bwb_metrics_and_score(bwb_filtered)
-    return bwb_scored
-
-
-
-
-# src/options_strategy_lab/__init__.py
-
-from .data_loader import load_chain_csv, select_ticker_and_expiry
-from .strategies import generate_bwb_candidates
-from .scoring import score_broken_wing_butterflies, sort_by_score
-
-
-def run_bwb_scan(csv_path: str, underlying: str, expiry: str):
     """
-    High-level convenience wrapper used by scripts/run_bwb_scan.py.
+    High-level pipeline:
 
-    1. Load flattened chain CSV
-    2. Slice by underlying + expiry + CALLs
-    3. Generate BWB candidates
-    4. Score + sort
+      1) Load flattened chain CSV
+      2) Slice to (underlying, expiry, CALL)
+      3) Generate BWB candidates
+      4) Filter candidates
+      5) Score & rank by score
     """
     chain_df = load_chain_csv(csv_path)
+
     calls_slice = select_ticker_and_expiry(
         chain_df,
         underlying=underlying,
@@ -44,7 +37,17 @@ def run_bwb_scan(csv_path: str, underlying: str, expiry: str):
     )
 
     bwb_candidates = generate_bwb_candidates(calls_slice)
-    scored = score_broken_wing_butterflies(bwb_candidates)
-    ranked = sort_by_score(scored)
-    return ranked
 
+    filtered = filter_broken_wing_butterflies(
+        bwb_candidates,
+        min_credit=min_credit,
+        min_dte=min_dte,
+        max_dte=max_dte,
+        min_short_delta=min_short_delta,
+        max_short_delta=max_short_delta,
+    )
+
+    scored = score_broken_wing_butterflies(filtered)
+    ranked = sort_by_score(scored)
+
+    return ranked
