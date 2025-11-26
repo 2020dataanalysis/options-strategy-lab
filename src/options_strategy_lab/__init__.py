@@ -13,22 +13,12 @@ def run_bwb_scan(
     underlying: str,
     expiry: str,
     *,
-    # default filter knobs – you can tweak for the assignment
     min_credit: float = 0.0,
     min_dte: Optional[int] = None,
     max_dte: Optional[int] = None,
     min_short_delta: Optional[float] = None,
     max_short_delta: Optional[float] = None,
 ):
-    """
-    High-level pipeline:
-
-      1) Load flattened chain CSV
-      2) Slice to (underlying, expiry, CALL)
-      3) Generate BWB candidates
-      4) Filter candidates
-      5) Score & rank by score
-    """
     chain_df = load_chain_csv(csv_path)
 
     calls_slice = select_ticker_and_expiry(
