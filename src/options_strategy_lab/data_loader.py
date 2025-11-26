@@ -1,5 +1,5 @@
 # src/options_strategy_lab/data_loader.py
-
+from typing import Optional
 import pandas as pd
 from pathlib import Path
 
@@ -7,20 +7,11 @@ from pathlib import Path
 def load_chain_csv(csv_path: str) -> pd.DataFrame:
     """
     Load a flattened options chain CSV into a DataFrame.
-
-    Expected columns include at least:
-      - underlying
-      - expiry
-      - put_call
-      - strike
-      - mid
-      - delta
-      - days_to_expiration
     """
     path = Path(csv_path)
     df = pd.read_csv(path)
 
-    # Normalize column names just in case (strip spaces, lower-case)
+    # Normalize column names just in case (strip spaces)
     df.columns = [c.strip() for c in df.columns]
 
     return df
@@ -31,15 +22,13 @@ def select_ticker_and_expiry(
     *,
     underlying: str,
     expiry: str,
-    put_call: str | None = None,
+    put_call: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Slice the flattened chain for:
       - a single underlying symbol
       - a single expiry (string, e.g. '2025-11-28')
       - optional put_call filter ('CALL' or 'PUT')
-
-    Returns a DataFrame filtered to those rows.
     """
 
     mask = (df["underlying"] == underlying) & (df["expiry"] == expiry)
