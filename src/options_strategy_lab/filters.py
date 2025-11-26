@@ -1,16 +1,16 @@
 # src/options_strategy_lab/filters.py
 
-from __future__ import annotations
+from typing import Optional
 import pandas as pd
 
 
 def filter_broken_wing_butterflies(
     bwb_df: pd.DataFrame,
-    min_credit: float | None = 0.0,
-    min_dte: int | None = None,
-    max_dte: int | None = None,
-    min_short_delta: float | None = None,
-    max_short_delta: float | None = None,
+    min_credit: Optional[float] = 0.0,
+    min_dte: Optional[int] = None,
+    max_dte: Optional[int] = None,
+    min_short_delta: Optional[float] = None,
+    max_short_delta: Optional[float] = None,
 ) -> pd.DataFrame:
     """
     Apply simple, interpretable filters to BWB candidates.

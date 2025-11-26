@@ -1,5 +1,7 @@
 # src/options_strategy_lab/__init__.py
 
+from typing import Optional
+
 from .data_loader import load_chain_csv, select_ticker_and_expiry
 from .strategies import generate_bwb_candidates
 from .filters import filter_broken_wing_butterflies
@@ -13,10 +15,10 @@ def run_bwb_scan(
     *,
     # default filter knobs – you can tweak for the assignment
     min_credit: float = 0.0,
-    min_dte: int | None = None,
-    max_dte: int | None = None,
-    min_short_delta: float | None = None,
-    max_short_delta: float | None = None,
+    min_dte: Optional[int] = None,
+    max_dte: Optional[int] = None,
+    min_short_delta: Optional[float] = None,
+    max_short_delta: Optional[float] = None,
 ):
     """
     High-level pipeline:
