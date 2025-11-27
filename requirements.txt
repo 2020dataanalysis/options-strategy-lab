@@ -1,7 +1,15 @@
+exceptiongroup==1.3.1
+iniconfig==2.1.0
 numpy==2.0.2
--e git+ssh://git@github.com/2020dataanalysis/options-strategy-lab.git@dfa9cf4d10adc4101ec8d0a17b968a478f4b4721#egg=options_strategy_lab
+-e git+ssh://git@github.com/2020dataanalysis/options-strategy-lab.git@603aeeca8b498a28ae8225aaab6ad96052fde58b#egg=options_strategy_lab
+packaging==25.0
 pandas==2.3.3
+pluggy==1.6.0
+Pygments==2.19.2
+pytest==8.4.2
 python-dateutil==2.9.0.post0
 pytz==2025.2
 six==1.17.0
+tomli==2.3.0
+typing_extensions==4.15.0
 tzdata==2025.2
