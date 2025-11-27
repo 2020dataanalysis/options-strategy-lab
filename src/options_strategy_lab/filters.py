@@ -1,11 +1,12 @@
 # src/options_strategy_lab/filters.py
 
-from typing import Optional
+from typing import Optional, Union, Sequence
+from collections.abc import Mapping
 import pandas as pd
 
 
-def filter_broken_wing_butterflies(
-    bwb_df: pd.DataFrame,
+def filter_bwb_candidates(
+    candidates: Union[pd.DataFrame, Sequence[Mapping]],
     min_credit: Optional[float] = 0.0,
     min_dte: Optional[int] = None,
     max_dte: Optional[int] = None,
@@ -15,13 +16,41 @@ def filter_broken_wing_butterflies(
     """
     Apply simple, interpretable filters to BWB candidates.
 
-    Assumes bwb_df has columns:
+    Accepts either:
+      - a pandas DataFrame, or
+      - a sequence (list/tuple) of dict-like objects.
+
+    Expected columns/keys:
       - credit
       - dte              (days to expiration)
       - short_delta      (abs(delta) of short strike)
     """
 
-    df = bwb_df.copy()
+    # 1. Normalize input to a DataFrame
+    if isinstance(candidates, pd.DataFrame):
+        df = candidates.copy()
+    else:
+        # We expect a list/sequence of mapping-like rows
+        if not isinstance(candidates, Sequence) or len(candidates) == 0:
+            raise ValueError("candidates must be a non-empty DataFrame or sequence of dict-like objects")
+
+        first = candidates[0]
+        if not isinstance(first, Mapping):
+            raise TypeError(
+                f"When passing a sequence, each element must be dict-like with keys "
+                f"'credit', 'dte', 'short_delta'. Got element of type {type(first)}."
+            )
+
+        # Now we can safely build a DataFrame from list-of-dicts
+        df = pd.DataFrame(candidates)
+
+    # 2. Sanity-check required columns
+    required_cols = {"credit", "dte", "short_delta"}
+    missing = required_cols - set(df.columns)
+    if missing:
+        raise KeyError(f"Missing required columns in candidates: {missing}")
+
+    # 3. Start with all rows passing
     mask = pd.Series(True, index=df.index)
 
     if min_credit is not None:
