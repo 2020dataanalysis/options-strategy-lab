@@ -1,0 +1,7 @@
+numpy==2.0.2
+-e git+ssh://git@github.com/2020dataanalysis/options-strategy-lab.git@dfa9cf4d10adc4101ec8d0a17b968a478f4b4721#egg=options_strategy_lab
+pandas==2.3.3
+python-dateutil==2.9.0.post0
+pytz==2025.2
+six==1.17.0
+tzdata==2025.2
