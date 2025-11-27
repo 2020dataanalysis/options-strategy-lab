@@ -4,6 +4,7 @@ pyproject.toml
 src/options_strategy_lab/__init__.py
 src/options_strategy_lab/chain_flatten.py
 src/options_strategy_lab/data_loader.py
+src/options_strategy_lab/filters.py
 src/options_strategy_lab/scoring.py
 src/options_strategy_lab/strategies.py
 src/options_strategy_lab.egg-info/PKG-INFO
@@ -11,4 +12,6 @@ src/options_strategy_lab.egg-info/SOURCES.txt
 src/options_strategy_lab.egg-info/dependency_links.txt
 src/options_strategy_lab.egg-info/top_level.txt
 tests/test_bwb.py
+tests/test_filters.py
+tests/test_payoff.py
 tests/test_scoring.py
