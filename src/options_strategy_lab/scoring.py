@@ -1,9 +1,9 @@
 # src/options_strategy_lab/scoring.py
 
-
-from __future__ import annotations
-from .filters import filter_bwb_candidates
+from __future__ import annotations   # 👈 must be first (after comments/docstring)
+from typing import Optional          # 👈 now safely below it
 import pandas as pd
+from .filters import filter_bwb_candidates
 
 
 def _bwb_pnl_points(k1: float, k2: float, k3: float, credit: float):
@@ -224,7 +224,7 @@ def apply_basic_filters(
     bwb_candidates,
     min_credit: float = 0.50,
     min_dte: int = 1,
-    max_dte: int | None = None,
+    max_dte: Optional[int] = None,
     min_short_delta: float = 0.10,
     max_short_delta: float = 0.30,
 ):
